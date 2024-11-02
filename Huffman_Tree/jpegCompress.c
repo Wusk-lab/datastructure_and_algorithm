@@ -243,13 +243,12 @@ int Search(Hnode*root,int target,int leafdir,boolnode*top,int length,bool* found
     }
     return length;
 }
-
-int Encoder(boolnode* start,HTree* root,int *sequence,int size){
+//encoding, 1st step
+int EncoderStep1(boolnode* start,HTree* root,int *sequence,int size){
     boolnode* bighead = start;
     boolnode *smallhead = bighead;
-    int top = -1;
-    int length = 0;
     int target = 0;
+    int length = 0;
     bool found ;
     for(int s=0;s<size;s++){
         target = *(sequence+s);
@@ -261,7 +260,62 @@ int Encoder(boolnode* start,HTree* root,int *sequence,int size){
     }
     return length;
 }
-
+//encoding, 2nd step
+bool* EncoderStep2(boolnode*start, int length){
+    bool *coding = (bool*)malloc(length*sizeof(bool));
+    boolnode *pointer = start;
+    for(int i=0;i<length;i++){
+        coding[i] = pointer->next->data;
+        pointer = pointer->next;
+    }
+    return coding;
+}
+//decoding,step 1
+int* Decoder(bool* coding, int length,HTree* root,int size){
+    int *output = (int*)malloc(size*sizeof(int));
+    Hnode *ptr = root;
+    int index = 0;
+    for(int i=0;i<length;i++){
+        if(coding[i]==1){
+            ptr = ptr->Right;
+        }
+        else{
+            ptr = ptr->Left;
+        }
+        if(IsLeaf(ptr)){
+            *(output+index) = ptr->data;
+            index++;
+            ptr = root;
+        }
+    }
+    return output;
+} 
+void ZigZagBack(int matrix[8][8],int* decode,int size,int col){
+    int x=0,y=0,index=0;
+    for(int i=0;i<col*2-2;i++){
+        if(i<=col-1){
+            if(i%2==0){
+                x = 0,y=i;
+                while(x<=i){
+                    matrix[y][x] = decode[index++];
+                    x++,y--;}}
+            else{
+                x = i,y=0;
+                while(y<=i){
+                    matrix[y][x] = decode[index++];
+                    x--,y++;}}}
+        else{
+            if(i%2==0){
+                x = i-col+1,y=col-1;
+                while(x<col){
+                    matrix[y][x] = decode[index++];
+                    y--,x++;}}
+            else{
+                x = col-1, y=i-col+1;
+                while(y<col){
+                    matrix[y][x] = decode[index++];
+                    y++,x--;}}}}
+}
 int main(){
     int matrix1[8][8];
     int value = 64;
@@ -280,12 +334,25 @@ int main(){
     boolnode*start=(boolnode*)malloc(sizeof(boolnode));
     start->next = NULL;
     start->front =NULL; 
-    int len = Encoder(start,huffmanTree,output,64);
-    boolnode*pointer =start;
-    while(pointer->next!=NULL){
-        printf("%d",pointer->next->data);
-        pointer = pointer->next;
+    int len = EncoderStep1(start,huffmanTree,output,64);
+    bool *coding = EncoderStep2(start,len);
+    for(int i=0;i<len;i++){
+        printf("%d",coding[i]);
     }
-    free(output);
+    printf("\n");
+    int *decode = Decoder(coding,len,huffmanTree,64);
+    for(int i=0;i<64;i++){
+        printf("%d ",*(decode+i));
+    }
+    printf("\n");
+    int matrix2[8][8]; 
+    ZigZagBack(matrix2,decode,64,8);
+    for (int i = 0; i <8 ; i++) {
+        for (int j = 0; j < 8; j++) {
+            printf("%d ",matrix2[i][j]);
+        }
+        printf("\n");
+    }
+    free(decode);
     return 0;
 }
